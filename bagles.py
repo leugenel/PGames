@@ -68,13 +68,57 @@ class Bagles:
             return None
         return user_input
 
+# In order to run unittets run: python -m unittest bagles.py 
 class BaglesTest(TestCase):
-    @patch('builtins.input', return_value='123')
-    def test_bagles(self, input):
-        bgl = Bagles()
+    def test_bagles_happy(self):
+        bgl = Bagles(silent=True)
+        bgl.get_user_input = Mock(return_value='123')
         type(bgl).hidden_number = PropertyMock(return_value="123")
         assert bgl.bagles() == True
        
+    @patch('builtins.input', return_value='aaa')
+    def test_bagles_unhappy(self, input):
+        bgl = Bagles(silent=True)
+        assert bgl.get_user_input() is None
+
+    def test_bagles_unhappy2(self):
+        bgl = Bagles(silent=True)
+        bgl.get_user_input = Mock(return_value='124')
+        type(bgl).hidden_number = PropertyMock(return_value="123")
+        assert bgl.bagles() == False
+
+    @patch('builtins.input', return_value='1444')
+    def test_bagles_unhappy3(self, input):
+        bgl = Bagles(silent=True)
+        assert bgl.get_user_input() is None
+
+    @patch('builtins.input', return_value='11')
+    def test_bagles_unhappy4(self, input):
+        bgl = Bagles(silent=True)
+        assert bgl.get_user_input() is None    
+
+    def test_guess1(self):
+        bgl = Bagles(silent=True)
+        type(bgl).hidden_number = PropertyMock(return_value="123")
+        res=bgl.guess(user_input='124')
+        assert res["Fermi"] == 2
+        assert res["Bagles"] == False
+
+    def test_guess2(self):
+        bgl = Bagles(silent=True)
+        type(bgl).hidden_number = PropertyMock(return_value="123")
+        res=bgl.guess(user_input='213')
+        assert res["Pico"] == 3
+        assert res["Bagles"] == False    
+
+    def test_guess2(self):
+        bgl = Bagles(silent=True)
+        type(bgl).hidden_number = PropertyMock(return_value="123")
+        res=bgl.guess(user_input='321')
+        assert res["Pico"] == 2
+        assert res["Fermi"] == 1
+        assert res["Bagles"] == False       
+
 greeting = """
             I am thinking of a 3-digit number. Try to guess what it is.
             Here are some clues:
@@ -94,12 +138,12 @@ def parse():
     parser = ArgumentParser()
     parser.add_argument('-n', dest='num_guesses', type=int, default=10, required=False)
     parser.add_argument('-s', dest='silent',  action='store_true', default=False)
-    parser.add_argument('-t', dest='test', action='store_true', default=False)
     return parser.parse_args()
+
 
 if __name__ == '__main__':
     args = parse()
     if not args.silent:
         print(greeting)
-    Bagles(n_guesses=args.num_guesses, silent=args.silent).bagles() if not args.test else BaglesTest().test_bagles()
+    Bagles(n_guesses=args.num_guesses, silent=args.silent).bagles()
    

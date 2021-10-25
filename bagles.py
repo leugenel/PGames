@@ -19,9 +19,8 @@ class Bagles:
     def hidden_number(self):
         return self.__hidden_number
 
-    def bagles(self):
-        
-        print(self.hidden_number) if not self.silent else None
+    def bagles(self) -> bool:
+        print(f"DEBUG: {self.hidden_number}")
 
         for i in range(self.n_guesses):
             user_input = self.get_user_input(i)
@@ -29,25 +28,40 @@ class Bagles:
                 continue
             if user_input == self.hidden_number:
                 print("Great you won! This is a number!") if not self.silent else None
-                return
-            bagles = True
-            for i in range(self.NUMBER_OF_DIGITS):
-                if user_input[i] == self.hidden_number[i]:
-                    print("Fermi") if not self.silent else None
-                    bagles = False
-                    continue
-                if user_input[i] in self.hidden_number:
-                    print("Pico") if not self.silent else None
-                    bagles = False  
-                    continue
-            if bagles:
-                print("Bagles")
+                return True
+            res = self.guess(user_input)
+            self.print_round_res(res) if not self.silent else None
+        
+        print(f"The number was {self.hidden_number}") if not self.silent else None
+        return False
+    
+    def print_round_res(self, res: dict):
+        if res.get("Bagles", False):
+            print("Bagles")
+            return
+        for _ in range(res.get("Fermi", 0)):
+            print("Fermi")
+        for _ in range(res.get("Pico", 0)):
+            print("Pico")    
+
+    def guess(self, user_input: str) -> dict:
+        res = dict()
+        res["Bagles"] = True
+        for i in range(self.NUMBER_OF_DIGITS):
+            if user_input[i] == self.hidden_number[i]:
+                res["Fermi"] = 1 if not res.get("Fermi") else res["Fermi"] + 1 
+                res["Bagles"] = False
+                continue
+            if user_input[i] in self.hidden_number:
+                res["Pico"] = 1 if not res.get("Pico") else res["Pico"] + 1 
+                res["Bagles"] = False  
+                continue
+        return res
 
     def get_user_input(self, counter: int = 0) -> str:
         user_input = input(f"Guess # {counter} ==>:")
         try:
-            if len(list(set(user_input))) != self.NUMBER_OF_DIGITS:
-                print("Please provide different digits in the number")
+            if 999 < int(user_input) or int(user_input) < 100 or len(list(set(user_input))) != self.NUMBER_OF_DIGITS:
                 raise ValueError
         except ValueError:
             print("You should enter 3-digit number with the different digits")
@@ -58,8 +72,8 @@ class BaglesTest(TestCase):
     @patch('builtins.input', return_value='123')
     def test_bagles(self, input):
         bgl = Bagles()
-        type(bgl).hidden_number = PropertyMock(return_value="124")
-        bgl.bagles()
+        type(bgl).hidden_number = PropertyMock(return_value="123")
+        assert bgl.bagles() == True
        
 greeting = """
             I am thinking of a 3-digit number. Try to guess what it is.

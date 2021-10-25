@@ -107,11 +107,11 @@ class BaglesTest(TestCase):
     def test_guess2(self):
         bgl = Bagles(silent=True)
         type(bgl).hidden_number = PropertyMock(return_value="123")
-        res=bgl.guess(user_input='213')
+        res=bgl.guess(user_input='312')
         assert res["Pico"] == 3
         assert res["Bagles"] == False    
 
-    def test_guess2(self):
+    def test_guess3(self):
         bgl = Bagles(silent=True)
         type(bgl).hidden_number = PropertyMock(return_value="123")
         res=bgl.guess(user_input='321')

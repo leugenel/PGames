@@ -8,13 +8,17 @@ class Bagles:
 
     GUESSES = 10
     NUMBER_OF_DIGITS = 3
-    machine_guess_number = "123"
+    
 
     def __init__(self, n_guesses: int = GUESSES, silent : bool = False, machine_input: bool = False) -> None:
         self.silent = silent
         self.n_guesses = n_guesses
         self.machine_input=machine_input
         self.__hidden_number = self.coin_number()
+        self.machine_guess_number = "123"
+        self.machine_numbers_for_choise = list(range(1,10))
+        self.user_input = None
+        self.guess_result = None
     
     @property
     def hidden_number(self):
@@ -24,21 +28,39 @@ class Bagles:
         print(f"DEBUG: {self.hidden_number}")
 
         for i in range(self.n_guesses):
-            user_input = self.get_user_input(i)
-            if not user_input:
+            print(f"Guess #{i}")
+            self.user_input = self.get_user_input(i)
+            if not self.user_input:
                 continue
-            if user_input == self.hidden_number:
+            if self.user_input == self.hidden_number:
                 print("Great you won! This is a number!") if not self.silent else None
                 return True
-            res = self.guess(user_input)
-            self.print_round_res(res) if not self.silent else None
-        
+            self.guess_result = self.guess(self.user_input)
+            self.print_round_res(self.guess_result) if not self.silent else None
+           
         print(f"The number was {self.hidden_number}") if not self.silent else None
         return False
     
     def machine_guess(self):
-        self.machine_guess_number = self.coin_number()
+        if self.guess_result is not None and  self.guess_result.get("Pico", False) + self.guess_result.get("Fermi", False) == 3:
+                print("Debug: 3 guess strategy")
+                self.machine_guess_number = self.machine_3_good_answer_strategy()
+        else:         
+            if self.guess_result is not None and self.guess_result.get("Bagles", False):
+                    self.machine_guess_bagles_answer_strategy()       
+            self.machine_guess_number = self.coin_number(numbers=self.machine_numbers_for_choise)
+        
         print(f"Machine guess: {self.machine_guess_number}")
+        return self.machine_guess_number
+
+    def machine_guess_bagles_answer_strategy(self):
+        for i in self.machine_guess_number:
+            self.machine_numbers_for_choise.remove(int(i))
+
+    def machine_3_good_answer_strategy(self):
+        digits_integer = [int(i) for i in self.user_input]
+        shuffle(digits_integer)
+        return "".join(str(c) for c in digits_integer[:self.NUMBER_OF_DIGITS])
 
     def print_round_res(self, res: dict):
         if res.get("Bagles", False):
@@ -65,10 +87,7 @@ class Bagles:
 
     def get_user_input(self, counter: int = 0) -> str:
         if self.machine_input:
-            machine_thread = Thread(target=self.machine_guess)
-            machine_thread.start()
-            machine_thread.join()
-            return self.machine_guess_number
+            return self.machine_guess()
             
         user_input = input(f"Guess # {counter} ==>:")
         try:
@@ -79,8 +98,8 @@ class Bagles:
             return None
         return user_input
 
-    def coin_number(self):
-        first_digits = [i for i in range(1,10)]
+    def coin_number(self, numbers = range(1,10)):
+        first_digits = [i for i in numbers]
         shuffle(first_digits)
         return "".join(str(c) for c in first_digits[:self.NUMBER_OF_DIGITS])
 

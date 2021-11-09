@@ -2,13 +2,12 @@ from random import shuffle
 from unittest.mock import Mock, patch, PropertyMock, MagicMock
 from unittest import TestCase
 from argparse import ArgumentParser
-from threading import Thread
+from itertools import permutations
 
 class Bagles:
 
     GUESSES = 10
     NUMBER_OF_DIGITS = 3
-    
 
     def __init__(self, n_guesses: int = GUESSES, silent : bool = False, machine_input: bool = False) -> None:
         self.silent = silent
@@ -19,6 +18,7 @@ class Bagles:
         self.machine_numbers_for_choise = list(range(1,10))
         self.user_input = None
         self.guess_result = None
+        self.number_permutations = list()
     
     @property
     def hidden_number(self):
@@ -58,9 +58,13 @@ class Bagles:
             self.machine_numbers_for_choise.remove(int(i))
 
     def machine_3_good_answer_strategy(self):
-        digits_integer = [int(i) for i in self.user_input]
-        shuffle(digits_integer)
-        return "".join(str(c) for c in digits_integer[:self.NUMBER_OF_DIGITS])
+        digits_integer = tuple([int(i) for i in self.user_input]) # like (6, 7, 8)
+        if len(self.number_permutations) == 0 : # only doing it first time, get all permutations of the number
+            self.number_permutations = list(permutations(digits_integer, self.NUMBER_OF_DIGITS))
+        # remove the latest from the list 
+        self.number_permutations.remove(digits_integer) # like [(8, 6, 7), (7, 8, 6), (7, 6, 8), (6, 8, 7), (6, 7, 8)]
+        print(f"DEBUG : remains permutations: {self.number_permutations}") 
+        return "".join(str(c) for c in self.number_permutations[0]) # take the first one 
 
     def print_round_res(self, res: dict):
         if res.get("Bagles", False):
@@ -103,7 +107,7 @@ class Bagles:
         shuffle(first_digits)
         return "".join(str(c) for c in first_digits[:self.NUMBER_OF_DIGITS])
 
-# In order to run unittets run: python -m unittest bagles.py 
+# In order to run unittets run: python3 -m unittest bagles.py 
 class BaglesTest(TestCase):
     def test_bagles_happy(self):
         bgl = Bagles(silent=True)
@@ -176,6 +180,7 @@ def parse():
     parser.add_argument('-m', dest='machine_input',  action='store_true', default=False, required=False)
     return parser.parse_args()
 
+# In order to run in machine mode 10 guesses: python3 bagles.py -n 10 -m
 if __name__ == '__main__':
     args = parse()
     if not args.silent:

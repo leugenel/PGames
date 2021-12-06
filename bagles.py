@@ -1,8 +1,10 @@
-from random import shuffle
+from random import choices
 from unittest.mock import Mock, patch, PropertyMock, MagicMock
 from unittest import TestCase
 from argparse import ArgumentParser
 from itertools import permutations
+from datetime import datetime
+from csv import writer
 
 class Bagles:
 
@@ -13,49 +15,65 @@ class Bagles:
         self.silent = silent
         self.n_guesses = n_guesses
         self.machine_input=machine_input
-        self.__hidden_number = self.coin_number()
+        self.__hidden_number = None
         self.machine_guess_number = "123"
-        self.machine_numbers_for_choise = list(range(1,10))
+        self.machine_numbers_for_choise = list(range(0,10))
+        self.bagles_weights = [0]+[0.1]*9 # initilize with one - allows all numbers, except 0 - the first one
         self.user_input = None
         self.guess_result = None
         self.number_permutations = list()
+        self.two_guess_number = None
     
     @property
     def hidden_number(self):
         return self.__hidden_number
 
-    def bagles(self) -> bool:
+    def bagles(self) -> int:
+        self.__hidden_number = self.coin_number()
         print(f"DEBUG: {self.hidden_number}")
 
         for i in range(self.n_guesses):
             print(f"Guess #{i}")
             self.user_input = self.get_user_input(i)
+            print(f"Current weights are {self.bagles_weights}")
             if not self.user_input:
                 continue
             if self.user_input == self.hidden_number:
                 print("Great you won! This is a number!") if not self.silent else None
-                return True
+                return i
             self.guess_result = self.guess(self.user_input)
             self.print_round_res(self.guess_result) if not self.silent else None
            
         print(f"The number was {self.hidden_number}") if not self.silent else None
-        return False
+        return self.n_guesses
     
     def machine_guess(self):
-        if self.guess_result is not None and  self.guess_result.get("Pico", False) + self.guess_result.get("Fermi", False) == 3:
+        if self.guess_result is not None and self.guess_result.get("Pico", False) + self.guess_result.get("Fermi", False) == 3:
                 print("Debug: 3 guess strategy")
                 self.machine_guess_number = self.machine_3_good_answer_strategy()
-        else:         
-            if self.guess_result is not None and self.guess_result.get("Bagles", False):
-                    self.machine_guess_bagles_answer_strategy()       
+        else: 
+            if self.guess_result is not None and self.guess_result.get("Pico", False) + self.guess_result.get("Fermi", False) == 2:
+                print("Debug: 2 guess strategy")
+                self.machine_2_good_answer_strategy()
+            elif self.guess_result is not None and self.guess_result.get("Bagles", False):
+                print("Debug: Bagles strategy")
+                self.machine_guess_bagles_answer_strategy()    
             self.machine_guess_number = self.coin_number(numbers=self.machine_numbers_for_choise)
         
         print(f"Machine guess: {self.machine_guess_number}")
         return self.machine_guess_number
 
+    def machine_2_good_answer_strategy(self):
+        for i in self.machine_guess_number:
+            self.bagles_weights[int(i)] += 0.1 
+
+    def machine_1_good_answer_strategy(self):
+        if self.two_guess_number:
+            pass 
+
     def machine_guess_bagles_answer_strategy(self):
         for i in self.machine_guess_number:
-            self.machine_numbers_for_choise.remove(int(i))
+            self.bagles_weights[int(i)]=0
 
     def machine_3_good_answer_strategy(self):
         digits_integer = tuple([int(i) for i in self.user_input]) # like (6, 7, 8)
@@ -102,10 +120,15 @@ class Bagles:
             return None
         return user_input
 
-    def coin_number(self, numbers = range(1,10)):
-        first_digits = [i for i in numbers]
-        shuffle(first_digits)
-        return "".join(str(c) for c in first_digits[:self.NUMBER_OF_DIGITS])
+    def coin_number(self, numbers = range(0,10)):
+        cnumber = []
+        local_weights = self.bagles_weights.copy()
+        for _ in range(self.NUMBER_OF_DIGITS):
+            one_number = choices(population=[i for i in numbers], weights=local_weights, k=1)[0]
+            cnumber.append(one_number)
+            local_weights[one_number] = 0 # to ensure set (w/o digits duplication)
+            
+        return "".join(str(c) for c in cnumber)
 
 # In order to run unittets run: python3 -m unittest bagles.py 
 class BaglesTest(TestCase):
@@ -178,6 +201,7 @@ def parse():
     parser.add_argument('-n', dest='num_guesses', type=int, default=Bagles.GUESSES, required=False)
     parser.add_argument('-s', dest='silent',  action='store_true', default=False, required=False)
     parser.add_argument('-m', dest='machine_input',  action='store_true', default=False, required=False)
+    parser.add_argument('-t', dest='statistics',  type=int, default=1, required=False)
     return parser.parse_args()
 
 # In order to run in machine mode 10 guesses: python3 bagles.py -n 10 -m
@@ -185,5 +209,12 @@ if __name__ == '__main__':
     args = parse()
     if not args.silent:
         print(greeting.format(Bagles.NUMBER_OF_DIGITS))
-    Bagles(n_guesses=args.num_guesses, silent=args.silent, machine_input=args.machine_input).bagles()
+
+    with open(f"statistics_{datetime.now().strftime('%d%m%y_%H%M')}.csv", "w+") as out_f:
+        tocsv = writer(out_f)
+        tocsv.writerow(["run number","win number"])
+        for i in range(args.statistics):
+            result = Bagles(n_guesses=args.num_guesses, silent=args.silent, machine_input=args.machine_input).bagles()
+            tocsv.writerow([i+1,result])
+
    

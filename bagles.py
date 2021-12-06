@@ -23,6 +23,7 @@ class Bagles:
         self.guess_result = None
         self.number_permutations = list()
         self.two_guess_number = None
+        self.guessed_numbers = list()
     
     @property
     def hidden_number(self):
@@ -121,14 +122,20 @@ class Bagles:
         return user_input
 
     def coin_number(self, numbers = range(0,10)):
-        cnumber = []
-        local_weights = self.bagles_weights.copy()
-        for _ in range(self.NUMBER_OF_DIGITS):
-            one_number = choices(population=[i for i in numbers], weights=local_weights, k=1)[0]
-            cnumber.append(one_number)
-            local_weights[one_number] = 0 # to ensure set (w/o digits duplication)
-            
-        return "".join(str(c) for c in cnumber)
+        for _ in range(10):
+            cnumber = []
+            number = ""
+            local_weights = self.bagles_weights.copy()
+            for _ in range(self.NUMBER_OF_DIGITS):
+                one_number = choices(population=[i for i in numbers], weights=local_weights, k=1)[0]
+                cnumber.append(one_number)
+                local_weights[one_number] = 0 # to ensure set (w/o digits duplication)
+            number = "".join(str(c) for c in cnumber)
+            if number not in self.guessed_numbers:
+                print(f"Found number {number} that wasn't in {self.guessed_numbers}")
+                break
+        self.guessed_numbers.append(number)    
+        return number
 
 # In order to run unittets run: python3 -m unittest bagles.py 
 class BaglesTest(TestCase):
